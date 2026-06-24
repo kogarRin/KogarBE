@@ -1,5 +1,5 @@
 import { Entity, Column } from "typeorm"
-import { BaseModel } from "../global.entity"
+import { BaseModel } from "@/global.entity"
 
 @Entity()
 export class User extends BaseModel {
@@ -10,6 +10,6 @@ export class User extends BaseModel {
     password: string
 
     @Column({length: 10})
-    name: string
+    nickname: string
 
 }
