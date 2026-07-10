@@ -1,4 +1,4 @@
-import {Body, ClassSerializerInterceptor, Controller, Post, Res, UseInterceptors} from "@nestjs/common"
+import {Body, ClassSerializerInterceptor, Controller, Get, Param, Post, Put, Res, UseInterceptors} from "@nestjs/common"
 import {InjectRepository} from "@nestjs/typeorm";
 import {User} from "@/user/user.entity";
 import {Repository} from "typeorm";
@@ -48,5 +48,25 @@ export class UserController {
             maxAge: 7 * 24 * 60 * 60 * 1000,
         })
         return ApiRes.succeed(user, "登录成功", ResponseCode.SUCCESS);
+    }
+
+    @UseInterceptors(ClassSerializerInterceptor)
+    @Get(":id")
+    async getProfile(@Param("id") id: number) {
+        return await this.userService.getProfile(id);
+    }
+
+    @UseInterceptors(ClassSerializerInterceptor)
+    @Put(":id/update")
+    async updateProfile(
+        @Param("id") id: number,
+        @Body("nickname") nickname?: string,
+        @Body("avatar") avatar?: string,
+        @Body("bio") bio?: string,
+        @Body("email") email?: string,
+        @Body("location") location?: string,
+        @Body("github") github?: string,
+    ) {
+        return await this.userService.updateProfile(id, {nickname, avatar, bio, email, location, github});
     }
 }
