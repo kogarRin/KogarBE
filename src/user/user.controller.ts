@@ -6,6 +6,7 @@ import {UserService} from "@/user/user.service";
 import {ApiRes, ResponseCode} from "@/type/res";
 import {Response} from "express"
 import {AuthService} from "@/auth/auth.service";
+import {Public} from "@/auth/public.decorator";
 
 @Controller("user")
 export class UserController {
@@ -17,6 +18,7 @@ export class UserController {
     ) {
     }
 
+    @Public()
     @Post("register")
     async register(
         @Body("username") username: string,
@@ -32,6 +34,7 @@ export class UserController {
         return await this.userService.create(username, password, nickname);
     }
 
+    @Public()
     @UseInterceptors(ClassSerializerInterceptor)
     @Post("login")
     async login(
