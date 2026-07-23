@@ -103,30 +103,4 @@ export class UserController {
     ) {
         return await this.userService.updateProfile(id, {nickname, bio, email, location, github}, file);
     }
-
-    @UseInterceptors(ClassSerializerInterceptor)
-    @Post(":id/avatar")
-    @UseInterceptors(FileInterceptor("avatar", {
-        storage: diskStorage({
-            destination: join(process.cwd(), "uploads", "avatars"),
-            filename: (_req, file, cb) => {
-                const name = Date.now() + "-" + Math.round(Math.random() * 1e9)
-                cb(null, name + extname(file.originalname))
-            },
-        }),
-        limits: {fileSize: 2 * 1024 * 1024}, // 2MB
-    }))
-    async uploadAvatar(
-        @Param("id") id: number,
-        @UploadedFile() file: Express.Multer.File,
-    ) {
-        if (!file) {
-            throw ApiRes.throw("请选择文件", ResponseCode.PARAMS_ERROR)
-        }
-        const isJpgOrPng = file.mimetype === "image/jpeg" || file.mimetype === "image/png"
-        if (!isJpgOrPng) {
-            throw ApiRes.throw("只支持 JPG/PNG 格式", ResponseCode.PARAMS_ERROR)
-        }
-        return await this.userService.uploadAvatar(id, file)
-    }
 }
