@@ -1,4 +1,15 @@
-import {Body, ClassSerializerInterceptor, Controller, Get, Param, Post, Put, Res, UseInterceptors} from "@nestjs/common"
+import {
+    Body,
+    ClassSerializerInterceptor,
+    Controller,
+    Get,
+    Param,
+    Post,
+    Put,
+    Res,
+    UploadedFile,
+    UseInterceptors
+} from "@nestjs/common"
 import {InjectRepository} from "@nestjs/typeorm";
 import {User} from "@/user/user.entity";
 import {Repository} from "typeorm";
@@ -7,6 +18,9 @@ import {ApiRes, ResponseCode} from "@/type/res";
 import {Response} from "express"
 import {AuthService} from "@/auth/auth.service";
 import {Public} from "@/auth/public.decorator";
+import {FileInterceptor} from "@nestjs/platform-express"
+import {diskStorage} from "multer"
+import {extname, join} from "path"
 
 @Controller("user")
 export class UserController {
@@ -53,6 +67,13 @@ export class UserController {
         return ApiRes.succeed(user, "登录成功", ResponseCode.SUCCESS);
     }
 
+
+    @Post("logout")
+    async logout(@Res({passthrough: true}) res: Response) {
+        res.clearCookie("token");
+        return ApiRes.succeed(null, "已登出", ResponseCode.SUCCESS);
+    }
+
     @UseInterceptors(ClassSerializerInterceptor)
     @Get(":id")
     async getProfile(@Param("id") id: number) {
@@ -61,15 +82,51 @@ export class UserController {
 
     @UseInterceptors(ClassSerializerInterceptor)
     @Put(":id/update")
+    @UseInterceptors(FileInterceptor("file", {
+        storage: diskStorage({
+            destination: join(process.cwd(), "uploads", "avatars"),
+            filename: (_req, file, cb) => {
+                const name = Date.now() + "-" + Math.round(Math.random() * 1e9)
+                cb(null, name + extname(file.originalname))
+            },
+        }),
+        limits: {fileSize: 2 * 1024 * 1024},
+    }))
     async updateProfile(
         @Param("id") id: number,
         @Body("nickname") nickname?: string,
-        @Body("avatar") avatar?: string,
         @Body("bio") bio?: string,
         @Body("email") email?: string,
         @Body("location") location?: string,
         @Body("github") github?: string,
+        @UploadedFile() file?: Express.Multer.File,
     ) {
-        return await this.userService.updateProfile(id, {nickname, avatar, bio, email, location, github});
+        return await this.userService.updateProfile(id, {nickname, bio, email, location, github}, file);
+    }
+
+    @UseInterceptors(ClassSerializerInterceptor)
+    @Post(":id/avatar")
+    @UseInterceptors(FileInterceptor("avatar", {
+        storage: diskStorage({
+            destination: join(process.cwd(), "uploads", "avatars"),
+            filename: (_req, file, cb) => {
+                const name = Date.now() + "-" + Math.round(Math.random() * 1e9)
+                cb(null, name + extname(file.originalname))
+            },
+        }),
+        limits: {fileSize: 2 * 1024 * 1024}, // 2MB
+    }))
+    async uploadAvatar(
+        @Param("id") id: number,
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+        if (!file) {
+            throw ApiRes.throw("请选择文件", ResponseCode.PARAMS_ERROR)
+        }
+        const isJpgOrPng = file.mimetype === "image/jpeg" || file.mimetype === "image/png"
+        if (!isJpgOrPng) {
+            throw ApiRes.throw("只支持 JPG/PNG 格式", ResponseCode.PARAMS_ERROR)
+        }
+        return await this.userService.uploadAvatar(id, file)
     }
 }
